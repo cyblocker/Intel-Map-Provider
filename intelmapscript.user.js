@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name              Intel Maps Link Provider
-// @name:zh-cn        Ingress Intel地图链接工具
+// @name:zh-CN        Ingress Intel地图链接工具
+// @name:zh-TW        Ingress Intel地圖連接工具
 // @namespace         http://cyblocker.com/
-// @version           0.1
-// @description       Append Ingress Intel map link to the coordinate information on Wikipedia and Geohack.
-// @description:zh-cn 在维基百科及其链接到的Geohack网站上提供Ingress Intel的地图链接
+// @version           0.2
+// @description       Provide Ingress Intel map link to the coordinate information on Wikipedia and Geohack.
+// @description:zh-CN 在维基百科及其链接到的Geohack网站上提供Ingress Intel的地图链接
+// @description:zh-TW 在維基百科及其連接到的Geohack上提供Ingress Intel地圖連接
 // @author            cyblocker
 // @match             https://tools.wmflabs.org/geohack/*
 // @match             https://*.wikipedia.org/wiki/*

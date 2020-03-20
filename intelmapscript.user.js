@@ -3,7 +3,7 @@
 // @name:zh-CN        Ingress Intel地图链接工具
 // @name:zh-TW        Ingress Intel地圖連接工具
 // @namespace         http://cyblocker.com/
-// @version           0.4
+// @version           0.5
 // @description       Provide Ingress Intel map link to the coordinate information on Wikipedia and Geohack.
 // @description:zh-CN 在维基百科及其链接到的Geohack网站上提供Ingress Intel的地图链接
 // @description:zh-TW 在維基百科及其連接到的Geohack上提供Ingress Intel地圖連接
@@ -15,22 +15,13 @@
 // ==/UserScript==
 
 (function () {
+
+    'use strict';
+
     const GEOHACK_URL_FORMAT = /tools.wmflabs.org\/geohack\/geohack.php?/i;
     const WIKIPEDIA_URL_FORMAT = /wikipedia.org\/wiki/i;
 
     const INTEL_URL_PREFIX = "https://intel.ingress.com/intel?ll=";
-
-    function EnsureDDFormat(input) {
-        var pattern = /[NSWE]/i;
-        if (pattern.test(input) == false) return input;
-        var parts = input.split(/[^\d\w]+/);
-        var dd = parseInt(parts[0], 10) + parts[1] / 60 + parts[2] / (60 * 60);
-
-        if (parts[3] == "S" || parts[3] == "W") {
-            dd = dd * -1;
-        }
-        return dd;
-    }
 
     function convertGeoUrlParams(input) {
         var parts = input.split("_");
@@ -79,35 +70,37 @@
         return linkItem;
     }
 
-    'use strict';
-
     if (GEOHACK_URL_FORMAT.test(document.URL)) {
-        var mapName = "Map";
-        if (/language=zh-yue/.test(document.URL)) {
-            mapName = "地圖";
-        } else if (/language=ja/.test(document.URL)) {
-            mapName = "地図";
-        } else if (/language=zh/.test(document.URL)) {
-            mapName = "地图";
-        }
-        // Emsamble the table
-        var insertItem = document.createElement("tr");
-        var serviceName = document.createElement("th");
-        serviceName.innerHTML = '<img width="16" alt="Ingress Logo" src="https://upload.wikimedia.org/wikipedia/commons/6/63/Ingress_Logo.png"> Ingress Intel Map';
-        serviceName.setAttribute("scope", "row");
-        serviceName.setAttribute("style", "font-weight:normal; text-align:left;");
-        insertItem.appendChild(serviceName);
-        var mapLink = document.createElement("td");
-        mapLink.innerHTML = '<a href="' + getIntelUrl() + '">' + mapName + '</a>';
-        insertItem.appendChild(mapLink);
-        var emptyTd = document.createElement("td");
-        insertItem.appendChild(emptyTd);
-        insertItem.appendChild(emptyTd);
 
         // Find correct location and insert
-        var tableNode = document.getElementById("GEOTEMPLATE-GLOBAL").getElementsByTagName("tbody")[0];
-        var firstItemNode = tableNode.getElementsByTagName("tr")[1];
-        tableNode.insertBefore(insertItem, firstItemNode);
+        if ($("#GEOTEMPLATE-GLOBAL").length != 0) {
+            var mapName = "Map";
+            if (/language=zh-yue/.test(document.URL)) {
+                mapName = "地圖";
+            } else if (/language=ja/.test(document.URL)) {
+                mapName = "地図";
+            } else if (/language=zh/.test(document.URL)) {
+                mapName = "地图";
+            }
+            var tableNode = document.getElementById("GEOTEMPLATE-GLOBAL").getElementsByTagName("tbody")[0];
+            // Emsamble the table
+            var insertItem = document.createElement("tr");
+            var serviceName = document.createElement("th");
+            serviceName.innerHTML = '<img width="16" alt="Ingress Logo" src="https://upload.wikimedia.org/wikipedia/commons/6/63/Ingress_Logo.png"> Ingress Intel Map';
+            serviceName.setAttribute("scope", "row");
+            serviceName.setAttribute("style", "font-weight:normal; text-align:left;");
+            insertItem.appendChild(serviceName);
+            var mapLink = document.createElement("td");
+            mapLink.innerHTML = '<a href="' + getIntelUrl() + '">' + mapName + '</a>';
+            insertItem.appendChild(mapLink);
+            var emptyTd = document.createElement("td");
+            insertItem.appendChild(emptyTd);
+            insertItem.appendChild(emptyTd);
+            var firstItemNode = tableNode.getElementsByTagName("tr")[1];
+            tableNode.insertBefore(insertItem, firstItemNode);
+        } else {
+            $("span.geo").after(getWikiLinkItem(getIntelUrl()));
+        }
     }
 
     if (WIKIPEDIA_URL_FORMAT.test(document.URL)) {

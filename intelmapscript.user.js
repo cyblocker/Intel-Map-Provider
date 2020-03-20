@@ -3,25 +3,26 @@
 // @name:zh-CN        Ingress Intel地图链接工具
 // @name:zh-TW        Ingress Intel地圖連接工具
 // @namespace         http://cyblocker.com/
-// @version           0.3
+// @version           0.4
 // @description       Provide Ingress Intel map link to the coordinate information on Wikipedia and Geohack.
 // @description:zh-CN 在维基百科及其链接到的Geohack网站上提供Ingress Intel的地图链接
 // @description:zh-TW 在維基百科及其連接到的Geohack上提供Ingress Intel地圖連接
 // @author            cyblocker
-// @updateURL         https://github.com/cyblocker/Intel-Map-Provider/raw/master/intelmapscript.user.js
-// @downloadURL       https://github.com/cyblocker/Intel-Map-Provider/raw/master/intelmapscript.user.js
-// @supportURL        https://github.com/cyblocker/Intel-Map-Provider/issues
 // @match             https://tools.wmflabs.org/geohack/*
 // @match             https://*.wikipedia.org/wiki/*
+// @require           https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
 // @grant             none
 // ==/UserScript==
 
 (function () {
+    const GEOHACK_URL_FORMAT = /tools.wmflabs.org\/geohack\/geohack.php?/i;
+    const WIKIPEDIA_URL_FORMAT = /wikipedia.org\/wiki/i;
+
+    const INTEL_URL_PREFIX = "https://intel.ingress.com/intel?ll=";
 
     function EnsureDDFormat(input) {
         var pattern = /[NSWE]/i;
         if (pattern.test(input) == false) return input;
-        console.debug("input: " + input);
         var parts = input.split(/[^\d\w]+/);
         var dd = parseInt(parts[0], 10) + parts[1] / 60 + parts[2] / (60 * 60);
 
@@ -31,25 +32,54 @@
         return dd;
     }
 
+    function convertGeoUrlParams(input) {
+        var parts = input.split("_");
+        var i = 0;
+        var latitude = 0;
+        var devider = 1;
+        for (; i < parts.length; i++) {
+            if (parts[i] != "S" && parts[i] != "N") {
+                latitude = latitude + parts[i] / devider;
+                devider = devider * 60;
+            } else {
+                if (parts[i] == "S") latitude = latitude * -1;
+                break;
+            }
+        }
+        var longitude = 0;
+        devider = 1;
+        for (i = i + 1; i < parts.length; i++) {
+            if (parts[i] != "W" && parts[i] != "E") {
+                longitude = longitude + parts[i] / devider;
+                devider = devider * 60;
+            } else {
+                if (parts[i] == "W") longitude = longitude * -1;
+                break;
+            }
+        }
+        return latitude.toFixed(6) + "," + longitude.toFixed(6);
+    }
+
     function getIntelUrl() {
-        const intelUrlPrefix = "https://intel.ingress.com/intel?ll=";
-        var latitude = EnsureDDFormat(document.getElementsByClassName("latitude")[0].innerText);
-        var longitude = EnsureDDFormat(document.getElementsByClassName("longitude")[0].innerText);
-        var intelUrl = intelUrlPrefix + latitude + "," + longitude;
+        var geoUrl;
+        if (GEOHACK_URL_FORMAT.test(document.URL)) {
+            geoUrl = document.URL;
+        } else {
+            geoUrl = $("a[href*='tools.wmflabs.org\/geohack\/geohack.php?']").attr("href");
+        }
+        var geoParams = /[&?]params=[0-9NSWE_.]+/.exec(geoUrl)[0].slice(8);
+        var intelUrl = INTEL_URL_PREFIX + convertGeoUrlParams(geoParams);
         return intelUrl;
     }
 
-    function getWikiLinkItem() {
+    function getWikiLinkItem(url) {
         var linkItem = document.createElement("a");
-        linkItem.setAttribute("href", getIntelUrl());
+        linkItem.setAttribute("href", url);
         linkItem.innerHTML = '<img width="17" title="Ingress Intel Map" src="https://upload.wikimedia.org/wikipedia/commons/6/63/Ingress_Logo.png">';
         return linkItem;
     }
 
     'use strict';
-
-    const GEOHACK_URL_FORMAT = /tools.wmflabs.org\/geohack\/geohack.php?/i;
-    const WIKIPEDIA_URL_FORMAT = /wikipedia.org\/wiki/i;
 
     if (GEOHACK_URL_FORMAT.test(document.URL)) {
         var mapName = "Map";
@@ -81,13 +111,17 @@
     }
 
     if (WIKIPEDIA_URL_FORMAT.test(document.URL)) {
-        if (GEOHACK_URL_FORMAT.test(document.body.innerHTML) == false) return;
-        var earthIcons = document.getElementsByClassName("geo-default");
-        for (var i = 0; i < earthIcons.length; i++) {
-            var parentNode = earthIcons[i].parentNode.parentNode;
-            var nextSibling = earthIcons[i].parentNode;
-            parentNode.insertBefore(getWikiLinkItem(), nextSibling);
+        if (GEOHACK_URL_FORMAT.test(document.body.innerHTML) == false) {
+            // Try to parse the internal map element, if possible.
+            $(document).one( "mousemove", "a[href*='\/maplink\/']", function(){
+                var wikiMapLink = $("a[href*='\/maplink\/']");
+                if (wikiMapLink.length == 0) return;
+                if (!(wikiMapLink.attr("data-lat") && wikiMapLink.attr("data-lon"))) return;
+                var url = INTEL_URL_PREFIX + wikiMapLink.attr("data-lat") + "," + wikiMapLink.attr("data-lon");
+                wikiMapLink.parent().before(getWikiLinkItem(url));
+            });
         }
+        $("a[href*='tools.wmflabs.org\/geohack\/geohack.php?']").before(getWikiLinkItem(getIntelUrl()));
     }
 
 })();

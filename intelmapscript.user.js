@@ -3,7 +3,7 @@
 // @name:zh-CN        Ingress Intel地图链接工具
 // @name:zh-TW        Ingress Intel地圖連接工具
 // @namespace         http://cyblocker.com/
-// @version           0.7
+// @version           0.8
 // @description       Provide Ingress Intel map link to the coordinate information on Wikipedia and Geohack.
 // @description:zh-CN 在维基百科及其链接到的Geohack网站上提供Ingress Intel的地图链接
 // @description:zh-TW 在維基百科及其連接到的Geohack上提供Ingress Intel地圖連接
@@ -19,8 +19,11 @@
 
     'use strict';
 
-    const GEOHACK_URL_FORMAT = /tools.wmflabs.org\/geohack\/geohack.php?/i;
+    const GEOHACK_URL_FORMAT = /geohack.toolforge.org\/geohack.php?/i;
+    const OLD_GEOHACK_URL_FORMAT = /tools.wmflabs.org\/geohack\/geohack.php?/i;
     const WIKIPEDIA_URL_FORMAT = /wikipedia.org\/wiki/i;
+    const GELHACK_DOM_PREFIX = "a[href*='geohack.toolforge.org\/geohack.php?']";
+    const OLD_GELHACK_DOM_PREFIX = "a[href*='tools.wmflabs.org\/geohack\/geohack.php?']";
 
     const INTEL_URL_PREFIX = "https://intel.ingress.com/intel?ll=";
 
@@ -56,8 +59,10 @@
         var geoUrl;
         if (GEOHACK_URL_FORMAT.test(document.URL)) {
             geoUrl = document.URL;
+        } else if (GEOHACK_URL_FORMAT.test(document.body.innerHTML)){
+            geoUrl = $(GELHACK_DOM_PREFIX).attr("href");
         } else {
-            geoUrl = $("a[href*='tools.wmflabs.org\/geohack\/geohack.php?']").attr("href");
+            geoUrl = $(OLD_GELHACK_DOM_PREFIX).attr("href");
         }
         var geoParams = /[&?]params=[0-9NSWE_.]+/.exec(geoUrl)[0].slice(8);
         var intelUrl = INTEL_URL_PREFIX + convertGeoUrlParams(geoParams);
@@ -72,7 +77,7 @@
         return linkItem;
     }
 
-    if (GEOHACK_URL_FORMAT.test(document.URL)) {
+    if (GEOHACK_URL_FORMAT.test(document.URL) || OLD_GEOHACK_URL_FORMAT.test(document.URL)) {
 
         // Find correct location and insert
         if ($("#GEOTEMPLATE-GLOBAL").length != 0) {
@@ -101,11 +106,11 @@
             var firstItemNode = tableNode.getElementsByTagName("tr")[1];
             tableNode.insertBefore(insertItem, firstItemNode);
         }
-        $("span.geo").after(getWikiLinkItem(getIntelUrl()));
+        $("a[href^=geo]").after(getWikiLinkItem(getIntelUrl()));
     }
 
     if (WIKIPEDIA_URL_FORMAT.test(document.URL)) {
-        if (GEOHACK_URL_FORMAT.test(document.body.innerHTML) == false) {
+        if (GEOHACK_URL_FORMAT.test(document.body.innerHTML) == false && OLD_GEOHACK_URL_FORMAT.test(document.body.innerHTML) == false) {
             // Try to parse the internal map element, if possible.
             $(document).one( "mousemove", "a[href*='\/maplink\/']", function(){
                 var wikiMapLink = $("a[href*='\/maplink\/']");
@@ -115,7 +120,8 @@
                 wikiMapLink.parent().before(getWikiLinkItem(url));
             });
         }
-        $("a[href*='tools.wmflabs.org\/geohack\/geohack.php?']").before(getWikiLinkItem(getIntelUrl()));
+        $(GELHACK_DOM_PREFIX).before(getWikiLinkItem(getIntelUrl()));
+        $(OLD_GELHACK_DOM_PREFIX).before(getWikiLinkItem(getIntelUrl()));
     }
 
 })();
